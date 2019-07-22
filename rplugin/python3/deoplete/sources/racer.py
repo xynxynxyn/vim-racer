@@ -63,8 +63,7 @@ class Source(Base):
         candidates = []
         insert_paren = int(self.vim.eval('g:racer_insert_paren'))
         for line in [l[6:] for l
-                     in self.get_results(context, 'complete',
-                                         context['complete_position'] + 1)
+                     in self.get_results(context, 'complete')
                      if l.startswith('MATCH')]:
             completions = line.split(',')
             kind = typeMap.get(completions[4], '')
@@ -85,23 +84,18 @@ class Source(Base):
             candidates.append(completion)
         return candidates
 
-    def get_results(self, context, command, col):
+    def get_results(self, context, command):
         with tempfile.NamedTemporaryFile(mode='w') as tf:
             tf.write("\n".join(self.vim.current.buffer))
             tf.flush()
 
             args = [
-                self.__racer, command,
-                str(self.vim.funcs.line('.')),
-                str(col - 1),
-                tf.name
-            ] if command == 'prefix' else [
-                self.__racer, command,
-                str(self.vim.funcs.line('.')),
-                str(col - 1),
-                self.vim.current.buffer.name,
-                tf.name
-            ]
+                    self.__racer, command,
+                    str(context['position'][1]),
+                    str(context['position'][2] - 1),
+                    context['bufpath']
+                    ]
+
             try:
                 results = subprocess.check_output(args).decode(
                     context['encoding']).splitlines()
